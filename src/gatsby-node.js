@@ -28,13 +28,14 @@ exports.sourceNodes = async ({
   entityLevel,
   schemaType,
   entitiesArray = [{}],
+  followNext = false,
   params = {},
   verboseOutput = false,
   enableDevRefresh = false,
   refreshId = 'id'
 }) => {
   //store the attributes in an object to avoid naming conflicts
-  const attributes = {typePrefix, url, method, headers, data, localSave, skipCreateNode, path, auth, params, payloadKey, name, entityLevel, schemaType, enableDevRefresh, refreshId}
+  const attributes = {typePrefix, url, method, headers, data, localSave, skipCreateNode, path, auth, params, payloadKey, name, followNext, entityLevel, schemaType, enableDevRefresh, refreshId}
   const { createNode } = actions;
 
   // If true, output some info as the plugin runs
@@ -57,7 +58,7 @@ exports.sourceNodes = async ({
   }
 
   await forEachAsync(entitiesArray, async (entity) => {
-
+    let values = [];
     // default to the general properties for any props not provided
 
     const typePrefix = entity.typePrefix ? entity.typePrefix : attributes.typePrefix
@@ -70,6 +71,8 @@ exports.sourceNodes = async ({
     const path = entity.path ? entity.path : attributes.path
     const auth = entity.auth ? entity.auth : attributes.auth
     const params = entity.params ? entity.params : attributes.params
+    const followNext = entity.followNext ? entity.followNext : attributes.followNext
+
     const payloadKey = entity.payloadKey ? entity.payloadKey : attributes.payloadKey
     const name = entity.name ? entity.name : attributes.name
     const entityLevel = entity.entityLevel ? entity.entityLevel : attributes.entityLevel 
@@ -88,7 +91,17 @@ exports.sourceNodes = async ({
 
     // Fetch the data
     let entities = await fetch({url, method, headers, data, name, localSave, path, payloadKey, auth, params, verbose, reporter})
-
+    console.warn('entities' + JSON.stringify(entities));
+    console.warn('followNext?' + followNext);
+    if (followNext) {
+      values = values.concat(entities['values']);
+      while (entities['next']) {
+        entities = await fetch({url: entities['next'], method, headers, data, name, localSave, path, payloadKey, auth, params, verbose, reporter})
+        values = values.concat(entities['values']);
+      }
+      entities['values'] = values;
+      console.warn(`nextLink ${entities['next']}`);
+    }
     // Interpolate entities from nested resposne
     if (entityLevel) {
       entities = objectRef(entities, entityLevel)

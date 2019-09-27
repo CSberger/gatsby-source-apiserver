@@ -35,6 +35,8 @@ async function fetch({
       options.auth = auth
     }
     allRoutes = await axios(options)
+    console.warn('done fetching');
+
   } catch (e) {
     console.log('\nGatsby Source Api Server response error:\n', e.response.data && e.response.data.errors)
     httpExceptionHandler(e, reporter)
